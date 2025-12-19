@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HireFit — Smart Resume Comparator</title>
+    <!-- External Libraries (I/O Dependencies) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src='https://unpkg.com/tesseract.js@2.1.0/dist/tesseract.min.js'></script>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body class="min-h-screen p-4 sm:p-8">
+
+    <!-- 
+    ======================================================================
+    [VIRTUAL FILE 1: HTML STRUCTURE (index.html)]
+    This section defines the visible layout and elements of the application.
+    It relies heavily on Tailwind CSS for all styling.
+    ======================================================================
+    -->
+    <div class="max-w-4xl mx-auto bg-white shadow-2xl rounded-xl p-6 md:p-10">
+
+        <!-- Header -->
+        <header class="mb-8 border-b pb-4">
+            <h1 class="text-4xl font-extrabold text-indigo-700">HireFit</h1>
+            <p class="text-lg text-gray-500 mt-1">See how your resume stacks up against real recruiter expectations.</p>
+        </header>
+
+        <!-- Input and Control Panel -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
+            <!-- Left: Resume Input -->
+            <div class="lg:col-span-2">
+                <label for="fileInput" class="block text-sm font-medium text-gray-700 mb-2">Upload Resume (PDF, PNG, JPG) or Paste Text</label>
+                <input type="file" id="fileInput" accept=".pdf,.png,.jpg,.jpeg" onchange="handleFileUpload(event)"
+                    class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 p-2.5 mb-4 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+
+                <!-- Circular Progress Indicator -->
+                <div id="circularProgressContainer" class="hidden mb-4 flex justify-center items-center py-4">
+                    <div id="circularProgressOuter" class="circular-progress-outer">
+                        <div id="circularProgressInner" class="circular-progress-inner">
+                            <span id="progressPercentage">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="resumeInputContainer"> 
+                    <label for="resumeInput" class="block text-sm font-medium text-gray-700 mb-2 mt-4">Resume Text for Analysis</label>
+                    <textarea id="resumeInput" rows="12" placeholder="Upload a file or paste your resume text here. The content of your file will appear here automatically."
+                        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm shadow-inner resize-none"></textarea>
+                </div>
+            </div>
+
+            <!-- Right: Controls -->
+            <div class="lg:col-span-1 flex flex-col space-y-4">
+                <div>
+                    <label for="jobRoleInput" class="block text-sm font-medium text-gray-700 mb-2">Type or Select Target Role</label>
+                    <input type="text" id="jobRoleInput" list="jobRolesList" placeholder="Type or Select Role (e.g., Project Manager)" oninput="updateJobDescription()"
+                        class="w-full p-3 border border-gray-300 bg-white rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                    <datalist id="jobRolesList"><!-- Options populated by JS --></datalist>
+                </div>
+
+                <div class="flex-grow flex flex-col justify-end">
+                    <button onclick="compareResume()" id="analyzeButton" disabled
+                        class="w-full py-3 px-4 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 ease-in-out transform hover:scale-[1.01] disabled:bg-indigo-300">
+                        Generate Match Report
+                    </button>
+                    <p id="statusMessage" class="text-center mt-2 text-sm text-red-500 hidden"></p>
+                    <p id="loadingMessage" class="text-center mt-2 text-sm text-indigo-600 hidden font-medium">
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-indigo-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="loadingText">Analyzing...</span>
+                    </p>
+                </div>
+                
+                <div id="jobDescriptionContainer" class="p-3 bg-indigo-50 rounded-lg text-sm hidden">
+                    <h3 class="font-bold text-indigo-800 mb-1">Role Description</h3>
+                    <p id="jobDescription" class="text-indigo-700 italic"></p>
+                </div>
+            </div>
+
+        </section>
+
+        <hr class="mb-10">
+
+        <!-- Results Dashboard -->
+        <section id="resultsSection" class="hidden">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center">Match Report: <span id="reportRole" class="ml-2 text-indigo-600"></span></h2>
+
+            <!-- TOP CARDS: Score and Alignment (Changed to md:grid-cols-2 for clearer stacking) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Score and Comments -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-indigo-500 score-display">
+                    <p class="text-sm font-medium text-gray-500">Job Match Percentage</p>
+                    <div class="flex items-center mt-2">
+                        <div id="matchScoreCircle" class="w-20 h-20 flex items-center justify-center rounded-full text-2xl font-extrabold text-white">--%</div>
+                        <span id="scoreComment" class="ml-4 text-gray-600 font-medium">--</span>
+                    </div>
+                </div>
+
+                <!-- Alignment Placeholder -->
+                <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-teal-500">
+                    <p class="text-sm font-medium text-gray-500 mb-2">Resume Score & Experience Alignment</p>
+                    <div id="alignmentMetrics" class="space-y-2">
+                        <p class="text-lg font-semibold text-teal-700">Overall Score: <span id="resumeScore">Good</span></p>
+                        <p class="text-sm text-gray-600">Based on keyword density and experience length (simulated).</p>
+                        <p class="text-sm text-gray-600 italic">⭐ Tip: Focus on quantifiable achievements to boost alignment!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skill Gap and Suggestions -->
+            <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Skill Gap List (Left Column - Missing Skill + Inline Roadmap) -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-md border border-red-500">
+                    <h3 class="text-xl font-semibold text-red-700 mb-4 flex items-center">Critical Skill Gap List (<span id="missingCount">0</span> Missing)</h3>
+                    <ul id="missingSkillsList" class="space-y-0 text-gray-700 divide-y divide-red-300">
+                        <li class="italic text-gray-500 p-2">No critical missing skills found. Great job!</li>
+                    </ul>
+                </div>
+
+                <!-- Resume Content Modification Advice (Right Column - Advice ONLY) -->
+                <div class="bg-gray-50 p-6 rounded-xl shadow-md border border-indigo-500">
+                    <h3 class="text-xl font-semibold text-indigo-700 mb-4 flex items-center">Suggestions for Resume Improvement</h3>
+                    <div id="suggestionsList" class="space-y-4">
+                        <p class="italic text-gray-500">Analysis ready!</p>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </div>
+<script src="index.js"></script>
+</body>
+</html>

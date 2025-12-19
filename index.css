@@ -1,0 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .score-display {
+            transition: transform 0.3s ease-in-out;
+            cursor: default;
+        }
+        .score-display:hover {
+            transform: translateY(-2px);
+        }
+        /* Custom scrollbar for textarea */
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .loading-active {
+            pointer-events: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        #resumeInput.loading-status {
+            color: #312e81;
+            font-weight: 600;
+            font-style: italic;
+            text-align: center;
+        }
+
+        /* Circular Progress Styles */
+        .circular-progress-outer {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: #e0e7ff;
+        }
+
+        .circular-progress-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4f46e5;
+            font-weight: 700;
+            font-size: 1.125rem;
+            box-shadow: 0 0 0 4px #e0e7ff;
+        }
+
+        /* Custom Highlight for key terms */
+        .highlight-text {
+            font-weight: 700; /* Bold */
+            color: #4f46e5; /* Indigo-600 */
+            padding: 2px 4px;
+            background-color: #e0e7ff; /* Indigo-100 */
+            border-radius: 4px;
+        }
